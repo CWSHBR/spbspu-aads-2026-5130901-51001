@@ -24,7 +24,7 @@ namespace
     {}
   };
 
-  using PathInfoTable = shaykhraziev::HashTable<
+  using PathInfoTable = shaykhraziev::CuckooHashTable<
       std::string,
       PathInfo,
       shaykhraziev::HmacHash,

@@ -1,8 +1,8 @@
 #ifndef F0_PLANNER_HPP
 #define F0_PLANNER_HPP
 
+#include <cuckoo-hash-table.hpp>
 #include <hash-functions.hpp>
-#include <hash-table.hpp>
 #include <list.hpp>
 
 #include <cstddef>
@@ -40,7 +40,7 @@ namespace shaykhraziev
     std::size_t countTasks() const noexcept;
 
   private:
-    using PlannedTaskTable = HashTable< std::string, PlannedTask, HmacHash, StringEqual >;
+    using PlannedTaskTable = CuckooHashTable< std::string, PlannedTask, HmacHash, StringEqual >;
 
     PlannedTaskTable tasks_;
     List< std::string > taskOrder_;

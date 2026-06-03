@@ -2,7 +2,6 @@
 
 #include <cuckoo-hash-table.hpp>
 #include <hash-functions.hpp>
-#include <hash-table.hpp>
 
 #include "commands.hpp"
 #include "planner.hpp"
@@ -21,11 +20,9 @@ namespace
     }
   };
 
-  using Table = shaykhraziev::HashTable< std::string, int, shaykhraziev::HmacHash, shaykhraziev::StringEqual >;
-  using CollisionTable = shaykhraziev::HashTable< std::string, int, ConstantHash, shaykhraziev::StringEqual >;
-  using CuckooTable =
+  using Table =
       shaykhraziev::CuckooHashTable< std::string, int, shaykhraziev::HmacHash, shaykhraziev::StringEqual >;
-  using CuckooCollisionTable =
+  using CollisionTable =
       shaykhraziev::CuckooHashTable< std::string, int, ConstantHash, shaykhraziev::StringEqual >;
 }
 
@@ -34,7 +31,7 @@ BOOST_AUTO_TEST_CASE(hash_table_contract_add_find_set_drop)
   Table table(2, 2);
 
   BOOST_TEST(table.empty());
-  BOOST_TEST(table.capacity() == 4);
+  BOOST_TEST(table.capacity() == 8);
   BOOST_CHECK(table.add("alpha", 1));
   BOOST_CHECK(table.has("alpha"));
   BOOST_REQUIRE(table.find("alpha"));
@@ -57,7 +54,7 @@ BOOST_AUTO_TEST_CASE(hash_table_contract_rehash_copy_move)
   table.add("beta", 2);
   table.rehash(8);
 
-  BOOST_TEST(table.capacity() == 16);
+  BOOST_TEST(table.capacity() == 32);
   BOOST_TEST(table.get("alpha") == 1);
   BOOST_TEST(table.get("beta") == 2);
 
@@ -125,81 +122,4 @@ BOOST_AUTO_TEST_CASE(hash_table_contract_f0_tables_keep_working)
   shaykhraziev::CommandRegistry commands = shaykhraziev::makeCommandRegistry();
   BOOST_CHECK(commands.has("build-plan"));
   BOOST_CHECK(commands.has("critical-path"));
-}
-
-BOOST_AUTO_TEST_CASE(cuckoo_hash_table_contract_add_find_set_drop)
-{
-  CuckooTable table(2, 2);
-
-  BOOST_TEST(table.empty());
-  BOOST_TEST(table.capacity() == 8);
-  BOOST_CHECK(table.add("alpha", 1));
-  BOOST_CHECK(table.has("alpha"));
-  BOOST_REQUIRE(table.find("alpha"));
-  BOOST_TEST(*table.find("alpha") == 1);
-  BOOST_CHECK(!table.set("alpha", 2));
-  BOOST_TEST(table.get("alpha") == 2);
-  BOOST_CHECK(table.set("beta", 3));
-  BOOST_TEST(table.size() == 2);
-  BOOST_CHECK(table.drop("alpha"));
-  BOOST_CHECK(!table.has("alpha"));
-  BOOST_CHECK(!table.drop("missing"));
-  BOOST_CHECK(table.add("alpha", 4));
-  BOOST_TEST(table.get("alpha") == 4);
-}
-
-BOOST_AUTO_TEST_CASE(cuckoo_hash_table_contract_rehash_copy_move)
-{
-  CuckooTable table(2, 2);
-  for (std::size_t i = 0; i < 32; ++i)
-  {
-    table.add("key" + std::to_string(i), static_cast< int >(i));
-  }
-  table.rehash(32);
-
-  for (std::size_t i = 0; i < 32; ++i)
-  {
-    BOOST_TEST(table.get("key" + std::to_string(i)) == static_cast< int >(i));
-  }
-
-  CuckooTable copied(table);
-  copied.set("key0", 100);
-  BOOST_TEST(table.get("key0") == 0);
-  BOOST_TEST(copied.get("key0") == 100);
-
-  CuckooTable assigned(1, 2);
-  assigned = table;
-  BOOST_TEST(assigned.get("key31") == 31);
-
-  CuckooTable moved(std::move(assigned));
-  BOOST_TEST(moved.get("key1") == 1);
-
-  CuckooTable moveAssigned(1, 2);
-  moveAssigned = std::move(moved);
-  BOOST_TEST(moveAssigned.get("key2") == 2);
-}
-
-BOOST_AUTO_TEST_CASE(cuckoo_hash_table_contract_iterators_and_collisions)
-{
-  CuckooCollisionTable table(2, 2);
-  table.add("alpha", 1);
-  table.add("beta", 2);
-  table.add("gamma", 3);
-  table.add("delta", 4);
-
-  int total = 0;
-  for (CuckooCollisionTable::iterator it = table.begin(); it != table.end(); ++it)
-  {
-    total += it->value;
-  }
-  BOOST_TEST(total == 10);
-
-  const CuckooCollisionTable& constTable = table;
-  std::size_t count = 0;
-  for (CuckooCollisionTable::const_iterator it = constTable.cbegin(); it != constTable.cend(); ++it)
-  {
-    BOOST_CHECK(constTable.has(it->key));
-    ++count;
-  }
-  BOOST_TEST(count == table.size());
 }

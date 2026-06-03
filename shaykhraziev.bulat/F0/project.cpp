@@ -37,7 +37,7 @@ namespace
     values.swap(kept);
   }
 
-  using VisitStateTable = shaykhraziev::HashTable<
+  using VisitStateTable = shaykhraziev::CuckooHashTable<
       std::string,
       std::size_t,
       shaykhraziev::HmacHash,

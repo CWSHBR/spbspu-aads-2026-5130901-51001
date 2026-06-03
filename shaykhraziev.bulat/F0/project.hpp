@@ -1,8 +1,8 @@
 #ifndef F0_PROJECT_HPP
 #define F0_PROJECT_HPP
 
+#include <cuckoo-hash-table.hpp>
 #include <hash-functions.hpp>
-#include <hash-table.hpp>
 #include <list.hpp>
 
 #include <cstddef>
@@ -52,7 +52,7 @@ namespace shaykhraziev
     const List< std::string >& getTaskOrder() const noexcept;
 
   private:
-    using TaskTable = HashTable< std::string, Task, HmacHash, StringEqual >;
+    using TaskTable = CuckooHashTable< std::string, Task, HmacHash, StringEqual >;
 
     std::string name_;
     std::size_t startDay_;
@@ -79,7 +79,7 @@ namespace shaykhraziev
     std::size_t countProjects() const noexcept;
 
   private:
-    using ProjectTable = HashTable< std::string, Project, HmacHash, StringEqual >;
+    using ProjectTable = CuckooHashTable< std::string, Project, HmacHash, StringEqual >;
 
     ProjectTable projects_;
 

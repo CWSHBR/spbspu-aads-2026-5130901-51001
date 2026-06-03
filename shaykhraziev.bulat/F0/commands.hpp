@@ -3,8 +3,8 @@
 
 #include "project.hpp"
 
+#include <cuckoo-hash-table.hpp>
 #include <hash-functions.hpp>
-#include <hash-table.hpp>
 #include <list.hpp>
 
 #include <cstddef>
@@ -22,7 +22,7 @@ namespace shaykhraziev
     CommandFunction function;
   };
 
-  using CommandRegistry = HashTable< std::string, CommandHandler, HmacHash, StringEqual >;
+  using CommandRegistry = CuckooHashTable< std::string, CommandHandler, HmacHash, StringEqual >;
 
   CommandRegistry makeCommandRegistry();
   bool executeCommandLine(ProjectStorage& storage, const CommandRegistry& commands,
