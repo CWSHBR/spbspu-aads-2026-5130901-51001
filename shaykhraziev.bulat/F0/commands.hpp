@@ -20,6 +20,9 @@ namespace shaykhraziev
     std::size_t minArguments;
     std::size_t maxArguments;
     CommandFunction function;
+    const char* usage;
+    const char* description;
+    const char* example;
   };
 
   using CommandRegistry = CuckooHashTable< std::string, CommandHandler, HmacHash, StringEqual >;

@@ -34,6 +34,8 @@ BOOST_AUTO_TEST_CASE(commands_registry_contains_initial_commands)
   BOOST_CHECK(commands.has("show-gantt"));
   BOOST_CHECK(commands.has("critical-path"));
   BOOST_CHECK(commands.has("try-task"));
+  BOOST_CHECK(commands.has("help"));
+  BOOST_CHECK(commands.has("commands"));
   BOOST_CHECK(!commands.has("missing"));
 }
 
@@ -69,6 +71,41 @@ BOOST_AUTO_TEST_CASE(commands_reject_unknown_and_wrong_argument_count)
   BOOST_TEST(run(storage, "unknown") == "<INVALID COMMAND>\n");
   BOOST_TEST(run(storage, "make-project site 1") == "<INVALID COMMAND>\n");
   BOOST_TEST(run(storage, "add-task site task 1") == "<INVALID COMMAND>\n");
+}
+
+BOOST_AUTO_TEST_CASE(commands_help_prints_general_usage)
+{
+  shaykhraziev::ProjectStorage storage;
+  const std::string output = run(storage, "help");
+
+  BOOST_TEST(output.find("F0 Project Planner CLI") != std::string::npos);
+  BOOST_TEST(output.find("Usage:") != std::string::npos);
+  BOOST_TEST(output.find("lab <project-file>") != std::string::npos);
+  BOOST_TEST(output.find("Use \"help <command>\" for command details.") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_list_prints_known_commands)
+{
+  shaykhraziev::ProjectStorage storage;
+  const std::string output = run(storage, "commands");
+
+  BOOST_TEST(output.find("Command") != std::string::npos);
+  BOOST_TEST(output.find("make-project") != std::string::npos);
+  BOOST_TEST(output.find("build-plan") != std::string::npos);
+  BOOST_TEST(output.find("critical-path") != std::string::npos);
+  BOOST_TEST(output.find("help") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_help_prints_command_details)
+{
+  shaykhraziev::ProjectStorage storage;
+  const std::string output = run(storage, "help add-task");
+
+  BOOST_TEST(output.find("Command:") != std::string::npos);
+  BOOST_TEST(output.find("add-task") != std::string::npos);
+  BOOST_TEST(output.find("add-task <project> <taskId> <duration> <title...>") != std::string::npos);
+  BOOST_TEST(output.find("Example:") != std::string::npos);
+  BOOST_TEST(run(storage, "help missing") == "<INVALID COMMAND>\n");
 }
 
 BOOST_AUTO_TEST_CASE(commands_add_and_drop_dependencies)
