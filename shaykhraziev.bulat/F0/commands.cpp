@@ -523,9 +523,15 @@ namespace
       std::ostream& out)
   {
     const shaykhraziev::Project* project = storage.findProject(tokenAt(tokens, 1));
-    if (!project || !project->isPlanBuilt())
+    if (!project)
     {
       return false;
+    }
+    if (!project->isPlanBuilt())
+    {
+      out << "Gantt chart is not available because the plan is not built.\n";
+      out << "Run: build-plan " << project->getName() << '\n';
+      return true;
     }
     out << "Gantt chart: " << project->getName() << "\n\n";
     shaykhraziev::renderGantt(*project, out);

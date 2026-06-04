@@ -96,6 +96,18 @@ BOOST_AUTO_TEST_CASE(commands_dependencies_cycles_plan_and_views)
       "Dependency removed: backend no longer depends on design\n");
 }
 
+BOOST_AUTO_TEST_CASE(commands_show_gantt_suggests_building_plan)
+{
+  shaykhraziev::ProjectStorage storage;
+  storage.makeProject("site", 1, 2);
+  storage.findProject("site")->addTask("design", 3, "Design");
+
+  const std::string output = run(storage, "show-gantt site");
+
+  BOOST_TEST(output.find("Gantt chart is not available because the plan is not built.") != std::string::npos);
+  BOOST_TEST(output.find("Run: build-plan site") != std::string::npos);
+}
+
 BOOST_AUTO_TEST_CASE(commands_try_task_reports_possible_and_impossible)
 {
   shaykhraziev::ProjectStorage storage;
