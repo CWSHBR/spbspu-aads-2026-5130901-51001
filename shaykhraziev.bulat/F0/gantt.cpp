@@ -57,6 +57,7 @@ namespace
   {
     out << std::left << std::setw(static_cast< int >(width + 2)) << planned.taskId <<
         'W' << planned.workerId;
+    out << ' ';
     for (std::size_t day = project.getStartDay(); day <= project.getPlan().getProjectEndDay(); ++day)
     {
       const bool active = day >= planned.startDay && day <= planned.endDay;
