@@ -59,8 +59,8 @@ namespace
         'W' << planned.workerId;
     for (std::size_t day = project.getStartDay(); day <= project.getPlan().getProjectEndDay(); ++day)
     {
-      out << ' ' << std::right << std::setw(static_cast< int >(dayWidth)) <<
-          (day >= planned.startDay && day <= planned.endDay ? "#" : "");
+      const bool active = day >= planned.startDay && day <= planned.endDay;
+      out << std::string(dayWidth + 1, active ? '#' : ' ');
     }
     out << '\n';
   }

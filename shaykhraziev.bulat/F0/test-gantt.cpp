@@ -25,10 +25,10 @@ BOOST_AUTO_TEST_CASE(gantt_renders_typical_project)
   BOOST_TEST(out.str() ==
       "<GANTT site>\n"
       "DAYS:        1 2 3 4 5 6 7 8 9\n"
-      "design   W1 # # #            \n"
-      "layout   W1       # #        \n"
-      "backend  W2       # # # #    \n"
-      "test     W1               # #\n"
+      "design   W1######            \n"
+      "layout   W1      ####        \n"
+      "backend  W2      ########    \n"
+      "test     W1              ####\n"
       "<PROJECT-END: 9>\n");
 }
 
@@ -45,8 +45,8 @@ BOOST_AUTO_TEST_CASE(gantt_aligns_different_task_id_lengths)
   BOOST_TEST(out.str() ==
       "<GANTT site>\n"
       "DAYS:         1\n"
-      "a         W1 #\n"
-      "longtask  W2 #\n"
+      "a         W1##\n"
+      "longtask  W2##\n"
       "<PROJECT-END: 1>\n");
 }
 
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(gantt_aligns_marks_under_two_digit_days)
   BOOST_TEST(out.str() ==
       "<GANTT site>\n"
       "DAYS:      23 24 25 26 27\n"
-      "short  W1  #            \n"
-      "long   W2  #  #  #  #  #\n"
+      "short  W1###            \n"
+      "long   W2###############\n"
       "<PROJECT-END: 27>\n");
 }
