@@ -330,6 +330,44 @@ namespace
     }
   }
 
+  void printIndentedList(const shaykhraziev::List< std::string >& values, std::ostream& out)
+  {
+    if (values.empty())
+    {
+      out << "  <none>\n";
+      return;
+    }
+    for (shaykhraziev::List< std::string >::const_iterator it = values.cbegin(); it != values.cend(); ++it)
+    {
+      out << "  - " << *it << '\n';
+    }
+  }
+
+  std::size_t countDependencies(const shaykhraziev::Project& project)
+  {
+    std::size_t count = 0;
+    for (shaykhraziev::List< std::string >::const_iterator it = project.getTaskOrder().cbegin();
+        it != project.getTaskOrder().cend();
+        ++it)
+    {
+      const shaykhraziev::Task* task = project.findTask(*it);
+      if (task)
+      {
+        count += task->dependencies.size();
+      }
+    }
+    return count;
+  }
+
+  void printReadableProject(const shaykhraziev::Project& project, std::ostream& out)
+  {
+    out << "Project: " << project.getName() << '\n';
+    out << "Start day: " << project.getStartDay() << '\n';
+    out << "Workers: " << project.getWorkersCount() << '\n';
+    out << "Tasks: " << project.countTasks() << '\n';
+    out << "Plan: " << (project.isPlanBuilt() ? "built" : "not built") << '\n';
+  }
+
   bool makeProjectCommand(
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
@@ -362,6 +400,11 @@ namespace
     if (!project)
     {
       return false;
+    }
+    if (isVerbose())
+    {
+      printReadableProject(*project, out);
+      return true;
     }
     out << "<PROJECT: " << project->getName() <<
         ", START: " << project->getStartDay() <<
@@ -411,6 +454,17 @@ namespace
     if (!task)
     {
       return false;
+    }
+    if (isVerbose())
+    {
+      out << "Task: " << task->id << '\n';
+      out << "Title: " << task->title << '\n';
+      out << "Duration: " << task->duration << '\n';
+      out << "Dependencies:\n";
+      printIndentedList(task->dependencies, out);
+      out << "Dependents:\n";
+      printIndentedList(task->dependents, out);
+      return true;
     }
     out << "<TASK: " << task->id <<
         ", TITLE: " << task->title <<
@@ -485,6 +539,27 @@ namespace
       return false;
     }
 
+    if (isVerbose())
+    {
+      out << "Worker " << workerId << " tasks:\n\n";
+      out << "Task       Start   End\n";
+      out << "--------   -----   ---\n";
+      const shaykhraziev::Plan& plan = project->getPlan();
+      for (shaykhraziev::List< std::string >::const_iterator it = project->getTaskOrder().cbegin();
+          it != project->getTaskOrder().cend();
+          ++it)
+      {
+        const shaykhraziev::PlannedTask* planned = plan.findTask(*it);
+        if (planned && planned->workerId == workerId)
+        {
+          out << std::left << std::setw(10) << planned->taskId << ' ' <<
+              std::right << std::setw(5) << planned->startDay << "   " <<
+              std::setw(3) << planned->endDay << '\n';
+        }
+      }
+      return true;
+    }
+
     out << "<WORKER " << workerId << ">\n";
     const shaykhraziev::Plan& plan = project->getPlan();
     for (shaykhraziev::List< std::string >::const_iterator it = project->getTaskOrder().cbegin();
@@ -510,6 +585,24 @@ namespace
     if (!project)
     {
       return false;
+    }
+    if (isVerbose())
+    {
+      out << "Project statistics: " << project->getName() << "\n\n";
+      out << "Tasks: " << project->countTasks() << '\n';
+      out << "Dependencies: " << countDependencies(*project) << '\n';
+      out << "Total duration: " << project->getTotalDuration() << '\n';
+      out << "Workers: " << project->getWorkersCount() << '\n';
+      out << "Plan status: " << (project->isPlanBuilt() ? "built" : "not built") << '\n';
+      if (project->isPlanBuilt())
+      {
+        out << "Project end day: " << project->getPlan().getProjectEndDay() << '\n';
+      }
+      else
+      {
+        out << "Project end day: not built\n";
+      }
+      return true;
     }
     out << "<PROJECT: " << project->getName() <<
         ", START: " << project->getStartDay() <<
@@ -538,6 +631,10 @@ namespace
     if (!project || !project->isPlanBuilt())
     {
       return false;
+    }
+    if (isVerbose())
+    {
+      out << "Gantt chart: " << project->getName() << "\n\n";
     }
     shaykhraziev::renderGantt(*project, out);
     return true;
@@ -578,6 +675,22 @@ namespace
     if (!shaykhraziev::calculateCriticalPath(*project, path))
     {
       return false;
+    }
+    if (isVerbose())
+    {
+      out << "Critical path: " << project->getName() << "\n\n";
+      out << "Duration: " << path.duration << '\n';
+      out << "Path:\n";
+      if (path.taskIds.empty())
+      {
+        out << "  <empty>\n";
+      }
+      else
+      {
+        out << "  ";
+        printCriticalPath(path, out);
+      }
+      return true;
     }
     out << "<CRITICAL-PATH " << project->getName() << ">\n";
     printCriticalPath(path, out);

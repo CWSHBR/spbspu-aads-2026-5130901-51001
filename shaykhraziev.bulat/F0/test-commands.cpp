@@ -160,6 +160,60 @@ BOOST_AUTO_TEST_CASE(commands_verbose_mode_reports_failed_command)
   BOOST_TEST(output.find("show-project <name>") != std::string::npos);
 }
 
+BOOST_AUTO_TEST_CASE(commands_verbose_show_project_is_readable)
+{
+  shaykhraziev::ProjectStorage storage;
+  storage.makeProject("site", 1, 2);
+
+  BOOST_TEST(run(storage, "show-project site") == "<PROJECT: site, START: 1, WORKERS: 2, TASKS: 0>\n");
+  const std::string output = runSession(storage, "ui verbose\nshow-project site\n");
+
+  BOOST_TEST(output.find("Project: site") != std::string::npos);
+  BOOST_TEST(output.find("Start day: 1") != std::string::npos);
+  BOOST_TEST(output.find("Workers: 2") != std::string::npos);
+  BOOST_TEST(output.find("Plan: not built") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_verbose_show_task_and_stats_are_readable)
+{
+  shaykhraziev::ProjectStorage storage;
+  storage.makeProject("site", 1, 2);
+  storage.findProject("site")->addTask("design", 3, "Design");
+  storage.findProject("site")->addTask("backend", 4, "Backend");
+  storage.findProject("site")->addDependency("backend", "design");
+  const std::string output = runSession(storage, "ui verbose\nshow-task site backend\nstats site\n");
+
+  BOOST_TEST(output.find("Task: backend") != std::string::npos);
+  BOOST_TEST(output.find("Dependencies:") != std::string::npos);
+  BOOST_TEST(output.find("  - design") != std::string::npos);
+  BOOST_TEST(output.find("Project statistics: site") != std::string::npos);
+  BOOST_TEST(output.find("Dependencies: 1") != std::string::npos);
+  BOOST_TEST(output.find("Plan status: not built") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_verbose_plan_views_are_readable)
+{
+  shaykhraziev::ProjectStorage storage;
+  storage.makeProject("site", 1, 2);
+  storage.findProject("site")->addTask("design", 3, "Design");
+  storage.findProject("site")->addTask("backend", 4, "Backend");
+  storage.findProject("site")->addDependency("backend", "design");
+  const std::string output = runSession(storage,
+      "ui verbose\n"
+      "build-plan site\n"
+      "show-worker site 1\n"
+      "critical-path site\n"
+      "show-gantt site\n");
+
+  BOOST_TEST(output.find("Worker 1 tasks:") != std::string::npos);
+  BOOST_TEST(output.find("Task       Start   End") != std::string::npos);
+  BOOST_TEST(output.find("Critical path: site") != std::string::npos);
+  BOOST_TEST(output.find("Duration: 7") != std::string::npos);
+  BOOST_TEST(output.find("Path:") != std::string::npos);
+  BOOST_TEST(output.find("Gantt chart: site") != std::string::npos);
+  BOOST_TEST(output.find("<GANTT site>") != std::string::npos);
+}
+
 BOOST_AUTO_TEST_CASE(commands_add_and_drop_dependencies)
 {
   shaykhraziev::ProjectStorage storage;
