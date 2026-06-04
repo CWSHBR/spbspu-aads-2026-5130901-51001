@@ -1,9 +1,11 @@
 #include "commands.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <istream>
 #include <ostream>
 #include <string>
+#include <vector>
 
 #include <string-utils.hpp>
 
@@ -14,6 +16,14 @@
 namespace
 {
   const std::size_t UNLIMITED_ARGUMENTS = 0;
+
+  enum UiMode
+  {
+    COMPACT,
+    VERBOSE
+  };
+
+  UiMode currentUiMode = COMPACT;
 
   struct CommandDoc
   {
@@ -59,7 +69,9 @@ namespace
     {"help", "help [command]",
         "Show general help or details for one command.", "help add-task"},
     {"commands", "commands",
-        "List all commands.", "commands"}
+        "List all commands.", "commands"},
+    {"ui", "ui <compact|verbose>",
+        "Switch between compatible compact output and detailed diagnostics.", "ui verbose"}
   };
 
   const std::size_t COMMAND_DOCS_COUNT = sizeof(COMMAND_DOCS) / sizeof(COMMAND_DOCS[0]);
@@ -104,6 +116,11 @@ namespace
     const std::size_t argumentCount = tokenCount - 1;
     return argumentCount >= handler.minArguments &&
         (handler.maxArguments == UNLIMITED_ARGUMENTS || argumentCount <= handler.maxArguments);
+  }
+
+  bool isVerbose()
+  {
+    return currentUiMode == VERBOSE;
   }
 
   const CommandDoc* findCommandDoc(const std::string& name)
@@ -151,6 +168,100 @@ namespace
     out << "  " << doc.example << '\n';
   }
 
+  void printCommandUsage(const shaykhraziev::CommandHandler& handler, std::ostream& out)
+  {
+    out << "Usage:\n";
+    out << "  " << handler.usage << "\n\n";
+    out << "Example:\n";
+    out << "  " << handler.example << '\n';
+  }
+
+  std::size_t editDistance(const std::string& lhs, const std::string& rhs)
+  {
+    std::vector< std::size_t > previous(rhs.size() + 1);
+    std::vector< std::size_t > current(rhs.size() + 1);
+    for (std::size_t j = 0; j <= rhs.size(); ++j)
+    {
+      previous[j] = j;
+    }
+    for (std::size_t i = 1; i <= lhs.size(); ++i)
+    {
+      current[0] = i;
+      for (std::size_t j = 1; j <= rhs.size(); ++j)
+      {
+        const std::size_t replaceCost = lhs[i - 1] == rhs[j - 1] ? 0 : 1;
+        current[j] = std::min(
+            std::min(previous[j] + 1, current[j - 1] + 1),
+            previous[j - 1] + replaceCost);
+      }
+      previous.swap(current);
+    }
+    return previous[rhs.size()];
+  }
+
+  const CommandDoc* findClosestCommandDoc(const std::string& name)
+  {
+    const CommandDoc* best = nullptr;
+    std::size_t bestDistance = 3;
+    for (std::size_t i = 0; i < COMMAND_DOCS_COUNT; ++i)
+    {
+      const std::size_t distance = editDistance(name, COMMAND_DOCS[i].name);
+      if (distance < bestDistance)
+      {
+        bestDistance = distance;
+        best = &COMMAND_DOCS[i];
+      }
+    }
+    return best;
+  }
+
+  void printUnknownCommand(const std::string& commandName, std::ostream& out)
+  {
+    if (!isVerbose())
+    {
+      out << "<INVALID COMMAND>\n";
+      return;
+    }
+
+    out << "Unknown command: " << commandName << '\n';
+    const CommandDoc* suggestion = findClosestCommandDoc(commandName);
+    if (suggestion)
+    {
+      out << "Did you mean: " << suggestion->name << "?\n";
+    }
+    out << "Use \"commands\" to see available commands.\n";
+  }
+
+  void printInvalidArguments(
+      const std::string& commandName,
+      const shaykhraziev::CommandHandler& handler,
+      std::ostream& out)
+  {
+    if (!isVerbose())
+    {
+      out << "<INVALID COMMAND>\n";
+      return;
+    }
+
+    out << "Invalid arguments for command: " << commandName << "\n\n";
+    printCommandUsage(handler, out);
+  }
+
+  void printCommandFailure(
+      const std::string& commandName,
+      const shaykhraziev::CommandHandler& handler,
+      std::ostream& out)
+  {
+    if (!isVerbose())
+    {
+      out << "<INVALID COMMAND>\n";
+      return;
+    }
+
+    out << "Command failed: " << commandName << "\n\n";
+    printCommandUsage(handler, out);
+  }
+
   bool helpCommand(
       shaykhraziev::ProjectStorage&,
       const shaykhraziev::List< std::string >& tokens,
@@ -185,6 +296,28 @@ namespace
       out << std::left << std::setw(17) << COMMAND_DOCS[i].name << ' ' << COMMAND_DOCS[i].description << '\n';
     }
     return true;
+  }
+
+  bool uiCommand(
+      shaykhraziev::ProjectStorage&,
+      const shaykhraziev::List< std::string >& tokens,
+      const std::string&,
+      std::ostream& out)
+  {
+    const std::string mode = tokenAt(tokens, 1);
+    if (mode == "compact")
+    {
+      currentUiMode = COMPACT;
+      out << "<UI: compact>\n";
+      return true;
+    }
+    if (mode == "verbose")
+    {
+      currentUiMode = VERBOSE;
+      out << "<UI: verbose>\n";
+      return true;
+    }
+    return false;
   }
 
   void printDependencies(const shaykhraziev::Task& task, std::ostream& out)
@@ -499,6 +632,7 @@ namespace
 
 shaykhraziev::CommandRegistry shaykhraziev::makeCommandRegistry()
 {
+  currentUiMode = COMPACT;
   CommandRegistry commands(8, 4);
   commands.add("make-project", CommandHandler{3, 3, makeProjectCommand,
       "make-project <name> <startDay> <workersCount>", "Create a new project.", "make-project site 1 2"});
@@ -540,6 +674,8 @@ shaykhraziev::CommandRegistry shaykhraziev::makeCommandRegistry()
       "help [command]", "Show general help or details for one command.", "help add-task"});
   commands.add("commands", CommandHandler{0, 0, commandsCommand,
       "commands", "List all commands.", "commands"});
+  commands.add("ui", CommandHandler{1, 1, uiCommand,
+      "ui <compact|verbose>", "Switch between compatible compact output and detailed diagnostics.", "ui verbose"});
   return commands;
 }
 
@@ -556,14 +692,22 @@ bool shaykhraziev::executeCommandLine(
   }
 
   const CommandHandler* handler = commands.find(tokenAt(tokens, 0));
-  bool ok = handler && checkArgumentCount(*handler, tokens.size());
-  if (ok)
+  const std::string commandName = tokenAt(tokens, 0);
+  if (!handler)
   {
-    ok = handler->function(storage, tokens, line, out);
+    printUnknownCommand(commandName, out);
+    return false;
   }
+  if (!checkArgumentCount(*handler, tokens.size()))
+  {
+    printInvalidArguments(commandName, *handler, out);
+    return false;
+  }
+
+  const bool ok = handler->function(storage, tokens, line, out);
   if (!ok)
   {
-    out << "<INVALID COMMAND>\n";
+    printCommandFailure(commandName, *handler, out);
   }
   return ok;
 }

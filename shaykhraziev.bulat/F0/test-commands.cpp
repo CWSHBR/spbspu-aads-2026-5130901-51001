@@ -13,6 +13,15 @@ namespace
     shaykhraziev::executeCommandLine(storage, commands, line, out);
     return out.str();
   }
+
+  std::string runSession(shaykhraziev::ProjectStorage& storage, const std::string& lines)
+  {
+    shaykhraziev::CommandRegistry commands = shaykhraziev::makeCommandRegistry();
+    std::istringstream in(lines);
+    std::ostringstream out;
+    shaykhraziev::processCommands(storage, commands, in, out);
+    return out.str();
+  }
 }
 
 BOOST_AUTO_TEST_CASE(commands_registry_contains_initial_commands)
@@ -36,6 +45,7 @@ BOOST_AUTO_TEST_CASE(commands_registry_contains_initial_commands)
   BOOST_CHECK(commands.has("try-task"));
   BOOST_CHECK(commands.has("help"));
   BOOST_CHECK(commands.has("commands"));
+  BOOST_CHECK(commands.has("ui"));
   BOOST_CHECK(!commands.has("missing"));
 }
 
@@ -106,6 +116,48 @@ BOOST_AUTO_TEST_CASE(commands_help_prints_command_details)
   BOOST_TEST(output.find("add-task <project> <taskId> <duration> <title...>") != std::string::npos);
   BOOST_TEST(output.find("Example:") != std::string::npos);
   BOOST_TEST(run(storage, "help missing") == "<INVALID COMMAND>\n");
+}
+
+BOOST_AUTO_TEST_CASE(commands_verbose_mode_reports_unknown_command_with_suggestion)
+{
+  shaykhraziev::ProjectStorage storage;
+  const std::string output = runSession(storage, "ui verbose\nbild-plan site\n");
+
+  BOOST_TEST(output.find("<UI: verbose>") != std::string::npos);
+  BOOST_TEST(output.find("Unknown command: bild-plan") != std::string::npos);
+  BOOST_TEST(output.find("Did you mean: build-plan?") != std::string::npos);
+  BOOST_TEST(output.find("Use \"commands\" to see available commands.") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_verbose_mode_reports_invalid_arguments)
+{
+  shaykhraziev::ProjectStorage storage;
+  storage.makeProject("site", 1, 2);
+  const std::string output = runSession(storage, "ui verbose\nadd-task site task 1\n");
+
+  BOOST_TEST(output.find("Invalid arguments for command: add-task") != std::string::npos);
+  BOOST_TEST(output.find("Usage:") != std::string::npos);
+  BOOST_TEST(output.find("add-task <project> <taskId> <duration> <title...>") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_compact_mode_keeps_legacy_errors)
+{
+  shaykhraziev::ProjectStorage storage;
+  const std::string output = runSession(storage, "ui verbose\nui compact\nbild-plan site\n");
+
+  BOOST_TEST(output.find("<UI: verbose>") != std::string::npos);
+  BOOST_TEST(output.find("<UI: compact>") != std::string::npos);
+  BOOST_TEST(output.find("Unknown command:") == std::string::npos);
+  BOOST_TEST(output.find("<INVALID COMMAND>") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(commands_verbose_mode_reports_failed_command)
+{
+  shaykhraziev::ProjectStorage storage;
+  const std::string output = runSession(storage, "ui verbose\nshow-project missing\n");
+
+  BOOST_TEST(output.find("Command failed: show-project") != std::string::npos);
+  BOOST_TEST(output.find("show-project <name>") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(commands_add_and_drop_dependencies)
