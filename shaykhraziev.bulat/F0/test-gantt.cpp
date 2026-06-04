@@ -49,3 +49,21 @@ BOOST_AUTO_TEST_CASE(gantt_aligns_different_task_id_lengths)
       "longtask  W2 #\n"
       "<PROJECT-END: 1>\n");
 }
+
+BOOST_AUTO_TEST_CASE(gantt_aligns_marks_under_two_digit_days)
+{
+  shaykhraziev::Project project("site", 23, 2);
+  project.addTask("short", 1, "Short");
+  project.addTask("long", 5, "Long");
+  shaykhraziev::buildProjectPlan(project);
+  std::ostringstream out;
+
+  shaykhraziev::renderGantt(project, out);
+
+  BOOST_TEST(out.str() ==
+      "<GANTT site>\n"
+      "DAYS:      23 24 25 26 27\n"
+      "short  W1  #            \n"
+      "long   W2  #  #  #  #  #\n"
+      "<PROJECT-END: 27>\n");
+}
