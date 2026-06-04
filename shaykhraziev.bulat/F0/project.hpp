@@ -77,11 +77,13 @@ namespace shaykhraziev
     Project* findProject(const std::string& name);
     const Project* findProject(const std::string& name) const;
     std::size_t countProjects() const noexcept;
+    const List< std::string >& getProjectNames() const noexcept;
 
   private:
     using ProjectTable = CuckooHashTable< std::string, Project, HmacHash, StringEqual >;
 
     ProjectTable projects_;
+    List< std::string > projectNames_;
 
     void ensureProjectSpace();
   };

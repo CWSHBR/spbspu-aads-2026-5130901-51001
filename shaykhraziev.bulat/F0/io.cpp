@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <istream>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 
@@ -145,4 +146,60 @@ shaykhraziev::ProjectStorage shaykhraziev::readProjectsFromFile(const char* file
     throw std::runtime_error("cannot open file");
   }
   return readProjects(file);
+}
+
+void shaykhraziev::writeProjects(const ProjectStorage& storage, std::ostream& out)
+{
+  for (List< std::string >::const_iterator pit = storage.getProjectNames().cbegin();
+      pit != storage.getProjectNames().cend();
+      ++pit)
+  {
+    const Project* project = storage.findProject(*pit);
+    if (!project)
+    {
+      continue;
+    }
+    out << "project " << project->getName() << ' ' <<
+        project->getStartDay() << ' ' <<
+        project->getWorkersCount() << '\n';
+    for (List< std::string >::const_iterator tit = project->getTaskOrder().cbegin();
+        tit != project->getTaskOrder().cend();
+        ++tit)
+    {
+      const Task* task = project->findTask(*tit);
+      if (task)
+      {
+        out << "task " << project->getName() << ' ' <<
+            task->id << ' ' <<
+            task->duration << ' ' <<
+            task->title << '\n';
+      }
+    }
+    for (List< std::string >::const_iterator tit = project->getTaskOrder().cbegin();
+        tit != project->getTaskOrder().cend();
+        ++tit)
+    {
+      const Task* task = project->findTask(*tit);
+      if (!task)
+      {
+        continue;
+      }
+      for (List< std::string >::const_iterator dit = task->dependencies.cbegin();
+          dit != task->dependencies.cend();
+          ++dit)
+      {
+        out << "dependency " << project->getName() << ' ' << task->id << ' ' << *dit << '\n';
+      }
+    }
+  }
+}
+
+void shaykhraziev::writeProjectsToFile(const ProjectStorage& storage, const std::string& filename)
+{
+  std::ofstream file(filename.c_str());
+  if (!file)
+  {
+    throw std::runtime_error("cannot write file");
+  }
+  writeProjects(storage, file);
 }

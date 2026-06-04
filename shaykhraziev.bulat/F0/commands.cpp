@@ -17,14 +17,6 @@ namespace
 {
   const std::size_t UNLIMITED_ARGUMENTS = 0;
 
-  enum UiMode
-  {
-    COMPACT,
-    VERBOSE
-  };
-
-  UiMode currentUiMode = COMPACT;
-
   struct CommandDoc
   {
     const char* name;
@@ -67,11 +59,7 @@ namespace
         "Check whether a new independent task can finish before a deadline.",
         "try-task site qa 2 9 QA task"},
     {"help", "help [command]",
-        "Show general help or details for one command.", "help add-task"},
-    {"commands", "commands",
-        "List all commands.", "commands"},
-    {"ui", "ui <compact|verbose>",
-        "Switch between compatible compact output and detailed diagnostics.", "ui verbose"}
+        "Show general help or details for one command.", "help add-task"}
   };
 
   const std::size_t COMMAND_DOCS_COUNT = sizeof(COMMAND_DOCS) / sizeof(COMMAND_DOCS[0]);
@@ -118,11 +106,6 @@ namespace
         (handler.maxArguments == UNLIMITED_ARGUMENTS || argumentCount <= handler.maxArguments);
   }
 
-  bool isVerbose()
-  {
-    return currentUiMode == VERBOSE;
-  }
-
   const CommandDoc* findCommandDoc(const std::string& name)
   {
     for (std::size_t i = 0; i < COMMAND_DOCS_COUNT; ++i)
@@ -153,7 +136,6 @@ namespace
     out << "  critical-path <project>\n";
     out << "  stats <project>\n\n";
     out << "Use \"help <command>\" for command details.\n";
-    out << "Use \"commands\" to list all commands.\n";
   }
 
   void printCommandDetails(const CommandDoc& doc, std::ostream& out)
@@ -217,19 +199,13 @@ namespace
 
   void printUnknownCommand(const std::string& commandName, std::ostream& out)
   {
-    if (!isVerbose())
-    {
-      out << "<INVALID COMMAND>\n";
-      return;
-    }
-
     out << "Unknown command: " << commandName << '\n';
     const CommandDoc* suggestion = findClosestCommandDoc(commandName);
     if (suggestion)
     {
       out << "Did you mean: " << suggestion->name << "?\n";
     }
-    out << "Use \"commands\" to see available commands.\n";
+    out << "Use \"help\" to see available commands.\n";
   }
 
   void printInvalidArguments(
@@ -237,12 +213,6 @@ namespace
       const shaykhraziev::CommandHandler& handler,
       std::ostream& out)
   {
-    if (!isVerbose())
-    {
-      out << "<INVALID COMMAND>\n";
-      return;
-    }
-
     out << "Invalid arguments for command: " << commandName << "\n\n";
     printCommandUsage(handler, out);
   }
@@ -252,12 +222,6 @@ namespace
       const shaykhraziev::CommandHandler& handler,
       std::ostream& out)
   {
-    if (!isVerbose())
-    {
-      out << "<INVALID COMMAND>\n";
-      return;
-    }
-
     out << "Command failed: " << commandName << "\n\n";
     printCommandUsage(handler, out);
   }
@@ -281,53 +245,6 @@ namespace
     }
     printCommandDetails(*doc, out);
     return true;
-  }
-
-  bool commandsCommand(
-      shaykhraziev::ProjectStorage&,
-      const shaykhraziev::List< std::string >&,
-      const std::string&,
-      std::ostream& out)
-  {
-    out << "Command           Description\n";
-    out << "---------------   --------------------------------\n";
-    for (std::size_t i = 0; i < COMMAND_DOCS_COUNT; ++i)
-    {
-      out << std::left << std::setw(17) << COMMAND_DOCS[i].name << ' ' << COMMAND_DOCS[i].description << '\n';
-    }
-    return true;
-  }
-
-  bool uiCommand(
-      shaykhraziev::ProjectStorage&,
-      const shaykhraziev::List< std::string >& tokens,
-      const std::string&,
-      std::ostream& out)
-  {
-    const std::string mode = tokenAt(tokens, 1);
-    if (mode == "compact")
-    {
-      currentUiMode = COMPACT;
-      out << "<UI: compact>\n";
-      return true;
-    }
-    if (mode == "verbose")
-    {
-      currentUiMode = VERBOSE;
-      out << "<UI: verbose>\n";
-      return true;
-    }
-    return false;
-  }
-
-  void printDependencies(const shaykhraziev::Task& task, std::ostream& out)
-  {
-    for (shaykhraziev::List< std::string >::const_iterator it = task.dependencies.cbegin();
-        it != task.dependencies.cend();
-        ++it)
-    {
-      out << *it << '\n';
-    }
   }
 
   void printIndentedList(const shaykhraziev::List< std::string >& values, std::ostream& out)
@@ -372,22 +289,32 @@ namespace
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
       const std::string&,
-      std::ostream&)
+      std::ostream& out)
   {
     std::size_t startDay = 0;
     std::size_t workersCount = 0;
-    return shaykhraziev::parsePositiveSize(tokenAt(tokens, 2), startDay) &&
+    const bool ok = shaykhraziev::parsePositiveSize(tokenAt(tokens, 2), startDay) &&
         shaykhraziev::parsePositiveSize(tokenAt(tokens, 3), workersCount) &&
         storage.makeProject(tokenAt(tokens, 1), startDay, workersCount);
+    if (ok)
+    {
+      out << "Project created: " << tokenAt(tokens, 1) << '\n';
+    }
+    return ok;
   }
 
   bool dropProjectCommand(
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
       const std::string&,
-      std::ostream&)
+      std::ostream& out)
   {
-    return storage.dropProject(tokenAt(tokens, 1));
+    const bool ok = storage.dropProject(tokenAt(tokens, 1));
+    if (ok)
+    {
+      out << "Project deleted: " << tokenAt(tokens, 1) << '\n';
+    }
+    return ok;
   }
 
   bool showProjectCommand(
@@ -401,15 +328,7 @@ namespace
     {
       return false;
     }
-    if (isVerbose())
-    {
-      printReadableProject(*project, out);
-      return true;
-    }
-    out << "<PROJECT: " << project->getName() <<
-        ", START: " << project->getStartDay() <<
-        ", WORKERS: " << project->getWorkersCount() <<
-        ", TASKS: " << project->countTasks() << ">\n";
+    printReadableProject(*project, out);
     return true;
   }
 
@@ -417,7 +336,7 @@ namespace
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
       const std::string& line,
-      std::ostream&)
+      std::ostream& out)
   {
     shaykhraziev::Project* project = storage.findProject(tokenAt(tokens, 1));
     std::size_t duration = 0;
@@ -426,17 +345,27 @@ namespace
       return false;
     }
     const std::string title = getTailAfterTokens(line, 4);
-    return project->addTask(tokenAt(tokens, 2), duration, title);
+    const bool ok = project->addTask(tokenAt(tokens, 2), duration, title);
+    if (ok)
+    {
+      out << "Task added: " << tokenAt(tokens, 2) << '\n';
+    }
+    return ok;
   }
 
   bool dropTaskCommand(
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
       const std::string&,
-      std::ostream&)
+      std::ostream& out)
   {
     shaykhraziev::Project* project = storage.findProject(tokenAt(tokens, 1));
-    return project && project->dropTask(tokenAt(tokens, 2));
+    const bool ok = project && project->dropTask(tokenAt(tokens, 2));
+    if (ok)
+    {
+      out << "Task deleted: " << tokenAt(tokens, 2) << '\n';
+    }
+    return ok;
   }
 
   bool showTaskCommand(
@@ -455,22 +384,13 @@ namespace
     {
       return false;
     }
-    if (isVerbose())
-    {
-      out << "Task: " << task->id << '\n';
-      out << "Title: " << task->title << '\n';
-      out << "Duration: " << task->duration << '\n';
-      out << "Dependencies:\n";
-      printIndentedList(task->dependencies, out);
-      out << "Dependents:\n";
-      printIndentedList(task->dependents, out);
-      return true;
-    }
-    out << "<TASK: " << task->id <<
-        ", TITLE: " << task->title <<
-        ", DURATION: " << task->duration <<
-        ", DEPENDENCIES: " << task->dependencies.size() << ">\n";
-    printDependencies(*task, out);
+    out << "Task: " << task->id << '\n';
+    out << "Title: " << task->title << '\n';
+    out << "Duration: " << task->duration << '\n';
+    out << "Dependencies:\n";
+    printIndentedList(task->dependencies, out);
+    out << "Dependents:\n";
+    printIndentedList(task->dependents, out);
     return true;
   }
 
@@ -478,20 +398,30 @@ namespace
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
       const std::string&,
-      std::ostream&)
+      std::ostream& out)
   {
     shaykhraziev::Project* project = storage.findProject(tokenAt(tokens, 1));
-    return project && project->addDependency(tokenAt(tokens, 2), tokenAt(tokens, 3));
+    const bool ok = project && project->addDependency(tokenAt(tokens, 2), tokenAt(tokens, 3));
+    if (ok)
+    {
+      out << "Dependency added: " << tokenAt(tokens, 2) << " depends on " << tokenAt(tokens, 3) << '\n';
+    }
+    return ok;
   }
 
   bool dropDependencyCommand(
       shaykhraziev::ProjectStorage& storage,
       const shaykhraziev::List< std::string >& tokens,
       const std::string&,
-      std::ostream&)
+      std::ostream& out)
   {
     shaykhraziev::Project* project = storage.findProject(tokenAt(tokens, 1));
-    return project && project->dropDependency(tokenAt(tokens, 2), tokenAt(tokens, 3));
+    const bool ok = project && project->dropDependency(tokenAt(tokens, 2), tokenAt(tokens, 3));
+    if (ok)
+    {
+      out << "Dependency removed: " << tokenAt(tokens, 2) << " no longer depends on " << tokenAt(tokens, 3) << '\n';
+    }
+    return ok;
   }
 
   bool checkCyclesCommand(
@@ -505,7 +435,7 @@ namespace
     {
       return false;
     }
-    out << (project->hasCycle() ? "<CYCLE>\n" : "<NO CYCLES>\n");
+    out << "Cycle check: " << (project->hasCycle() ? "cycle found" : "no cycles") << '\n';
     return true;
   }
 
@@ -520,7 +450,7 @@ namespace
     {
       return false;
     }
-    out << "<PLAN BUILT>\n";
+    out << "Plan built for project: " << project->getName() << '\n';
     return true;
   }
 
@@ -539,28 +469,9 @@ namespace
       return false;
     }
 
-    if (isVerbose())
-    {
-      out << "Worker " << workerId << " tasks:\n\n";
-      out << "Task       Start   End\n";
-      out << "--------   -----   ---\n";
-      const shaykhraziev::Plan& plan = project->getPlan();
-      for (shaykhraziev::List< std::string >::const_iterator it = project->getTaskOrder().cbegin();
-          it != project->getTaskOrder().cend();
-          ++it)
-      {
-        const shaykhraziev::PlannedTask* planned = plan.findTask(*it);
-        if (planned && planned->workerId == workerId)
-        {
-          out << std::left << std::setw(10) << planned->taskId << ' ' <<
-              std::right << std::setw(5) << planned->startDay << "   " <<
-              std::setw(3) << planned->endDay << '\n';
-        }
-      }
-      return true;
-    }
-
-    out << "<WORKER " << workerId << ">\n";
+    out << "Worker " << workerId << " tasks:\n\n";
+    out << "Task       Start   End\n";
+    out << "--------   -----   ---\n";
     const shaykhraziev::Plan& plan = project->getPlan();
     for (shaykhraziev::List< std::string >::const_iterator it = project->getTaskOrder().cbegin();
         it != project->getTaskOrder().cend();
@@ -569,7 +480,9 @@ namespace
       const shaykhraziev::PlannedTask* planned = plan.findTask(*it);
       if (planned && planned->workerId == workerId)
       {
-        out << planned->taskId << ": START " << planned->startDay << ", END " << planned->endDay << '\n';
+        out << std::left << std::setw(10) << planned->taskId << ' ' <<
+            std::right << std::setw(5) << planned->startDay << "   " <<
+            std::setw(3) << planned->endDay << '\n';
       }
     }
     return true;
@@ -586,38 +499,20 @@ namespace
     {
       return false;
     }
-    if (isVerbose())
-    {
-      out << "Project statistics: " << project->getName() << "\n\n";
-      out << "Tasks: " << project->countTasks() << '\n';
-      out << "Dependencies: " << countDependencies(*project) << '\n';
-      out << "Total duration: " << project->getTotalDuration() << '\n';
-      out << "Workers: " << project->getWorkersCount() << '\n';
-      out << "Plan status: " << (project->isPlanBuilt() ? "built" : "not built") << '\n';
-      if (project->isPlanBuilt())
-      {
-        out << "Project end day: " << project->getPlan().getProjectEndDay() << '\n';
-      }
-      else
-      {
-        out << "Project end day: not built\n";
-      }
-      return true;
-    }
-    out << "<PROJECT: " << project->getName() <<
-        ", START: " << project->getStartDay() <<
-        ", END: ";
+    out << "Project statistics: " << project->getName() << "\n\n";
+    out << "Tasks: " << project->countTasks() << '\n';
+    out << "Dependencies: " << countDependencies(*project) << '\n';
+    out << "Total duration: " << project->getTotalDuration() << '\n';
+    out << "Workers: " << project->getWorkersCount() << '\n';
+    out << "Plan status: " << (project->isPlanBuilt() ? "built" : "not built") << '\n';
     if (project->isPlanBuilt())
     {
-      out << project->getPlan().getProjectEndDay();
+      out << "Project end day: " << project->getPlan().getProjectEndDay() << '\n';
     }
     else
     {
-      out << "NOT-BUILT";
+      out << "Project end day: not built\n";
     }
-    out << ", TASKS: " << project->countTasks() <<
-        ", WORKERS: " << project->getWorkersCount() <<
-        ", TOTAL-DURATION: " << project->getTotalDuration() << ">\n";
     return true;
   }
 
@@ -632,10 +527,7 @@ namespace
     {
       return false;
     }
-    if (isVerbose())
-    {
-      out << "Gantt chart: " << project->getName() << "\n\n";
-    }
+    out << "Gantt chart: " << project->getName() << "\n\n";
     shaykhraziev::renderGantt(*project, out);
     return true;
   }
@@ -676,25 +568,18 @@ namespace
     {
       return false;
     }
-    if (isVerbose())
+    out << "Critical path: " << project->getName() << "\n\n";
+    out << "Duration: " << path.duration << '\n';
+    out << "Path:\n";
+    if (path.taskIds.empty())
     {
-      out << "Critical path: " << project->getName() << "\n\n";
-      out << "Duration: " << path.duration << '\n';
-      out << "Path:\n";
-      if (path.taskIds.empty())
-      {
-        out << "  <empty>\n";
-      }
-      else
-      {
-        out << "  ";
-        printCriticalPath(path, out);
-      }
-      return true;
+      out << "  <empty>\n";
     }
-    out << "<CRITICAL-PATH " << project->getName() << ">\n";
-    printCriticalPath(path, out);
-    out << "<DURATION: " << path.duration << ">\n";
+    else
+    {
+      out << "  ";
+      printCriticalPath(path, out);
+    }
     return true;
   }
 
@@ -730,14 +615,15 @@ namespace
     }
     if (planned->endDay <= deadline)
     {
-      out << "<POSSIBLE>\n";
-      out << taskId << ": WORKER " << planned->workerId <<
-          ", START " << planned->startDay <<
-          ", END " << planned->endDay << '\n';
+      out << "Task can be scheduled before deadline.\n";
+      out << "Task: " << taskId << '\n';
+      out << "Worker: " << planned->workerId << '\n';
+      out << "Start: " << planned->startDay << '\n';
+      out << "End: " << planned->endDay << '\n';
     }
     else
     {
-      out << "<IMPOSSIBLE>\n";
+      out << "Task cannot be scheduled before deadline.\n";
     }
     return true;
   }
@@ -745,7 +631,6 @@ namespace
 
 shaykhraziev::CommandRegistry shaykhraziev::makeCommandRegistry()
 {
-  currentUiMode = COMPACT;
   CommandRegistry commands(8, 4);
   commands.add("make-project", CommandHandler{3, 3, makeProjectCommand,
       "make-project <name> <startDay> <workersCount>", "Create a new project.", "make-project site 1 2"});
@@ -785,10 +670,6 @@ shaykhraziev::CommandRegistry shaykhraziev::makeCommandRegistry()
       "Check whether a new independent task can finish before a deadline.", "try-task site qa 2 9 QA task"});
   commands.add("help", CommandHandler{0, 1, helpCommand,
       "help [command]", "Show general help or details for one command.", "help add-task"});
-  commands.add("commands", CommandHandler{0, 0, commandsCommand,
-      "commands", "List all commands.", "commands"});
-  commands.add("ui", CommandHandler{1, 1, uiCommand,
-      "ui <compact|verbose>", "Switch between compatible compact output and detailed diagnostics.", "ui verbose"});
   return commands;
 }
 
@@ -832,8 +713,10 @@ void shaykhraziev::processCommands(
     std::ostream& out)
 {
   std::string line;
+  out << " > ";
   while (std::getline(in, line))
   {
     executeCommandLine(storage, commands, line, out);
+    out << " > ";
   }
 }

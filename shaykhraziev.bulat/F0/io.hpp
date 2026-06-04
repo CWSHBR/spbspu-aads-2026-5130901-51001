@@ -10,6 +10,8 @@ namespace shaykhraziev
   bool parsePositiveSize(const std::string& token, std::size_t& value);
   ProjectStorage readProjects(std::istream& in);
   ProjectStorage readProjectsFromFile(const char* filename);
+  void writeProjects(const ProjectStorage& storage, std::ostream& out);
+  void writeProjectsToFile(const ProjectStorage& storage, const std::string& filename);
 }
 
 #endif

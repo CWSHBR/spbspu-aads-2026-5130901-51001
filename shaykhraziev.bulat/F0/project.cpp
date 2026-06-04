@@ -314,7 +314,8 @@ void shaykhraziev::Project::removeTaskFromDependencies(const std::string& taskId
 }
 
 shaykhraziev::ProjectStorage::ProjectStorage():
-  projects_(INITIAL_SLOTS, BUCKET_SIZE)
+  projects_(INITIAL_SLOTS, BUCKET_SIZE),
+  projectNames_()
 {}
 
 bool shaykhraziev::ProjectStorage::makeProject(
@@ -328,12 +329,18 @@ bool shaykhraziev::ProjectStorage::makeProject(
   }
   ensureProjectSpace();
   projects_.add(name, Project(name, startDay, workersCount));
+  projectNames_.pushBack(name);
   return true;
 }
 
 bool shaykhraziev::ProjectStorage::dropProject(const std::string& name)
 {
-  return projects_.drop(name);
+  if (!projects_.drop(name))
+  {
+    return false;
+  }
+  removeString(projectNames_, name);
+  return true;
 }
 
 shaykhraziev::Project* shaykhraziev::ProjectStorage::findProject(const std::string& name)
@@ -349,6 +356,11 @@ const shaykhraziev::Project* shaykhraziev::ProjectStorage::findProject(const std
 std::size_t shaykhraziev::ProjectStorage::countProjects() const noexcept
 {
   return projects_.size();
+}
+
+const shaykhraziev::List< std::string >& shaykhraziev::ProjectStorage::getProjectNames() const noexcept
+{
+  return projectNames_;
 }
 
 void shaykhraziev::ProjectStorage::ensureProjectSpace()
