@@ -3,8 +3,8 @@
 
 #include "graph.hpp"
 
-#include <hash-functions.hpp>
-#include <hash-table.hpp>
+#include "../common/hash-functions.hpp"
+#include "../common/hash-table.hpp"
 
 #include <iosfwd>
 #include <string>

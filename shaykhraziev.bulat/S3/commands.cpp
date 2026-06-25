@@ -1,7 +1,7 @@
 #include "commands.hpp"
 
-#include <list-utils.hpp>
-#include <string-utils.hpp>
+#include "../common/list-utils.hpp"
+#include "../common/string-utils.hpp"
 
 #include <istream>
 #include <ostream>

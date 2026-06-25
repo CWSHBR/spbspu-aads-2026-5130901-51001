@@ -1,6 +1,6 @@
 #include "graph.hpp"
 
-#include <list-utils.hpp>
+#include "../common/list-utils.hpp"
 
 namespace
 {
