@@ -1,7 +1,7 @@
 #ifndef S4_IO_HPP
 #define S4_IO_HPP
 
-#include <bstree.hpp>
+#include "../common/bstree.hpp"
 
 #include <iosfwd>
 #include <string>

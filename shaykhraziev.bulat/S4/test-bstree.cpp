@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include <bstree.hpp>
+#include "../common/bstree.hpp"
 
 #include <stdexcept>
 #include <string>
