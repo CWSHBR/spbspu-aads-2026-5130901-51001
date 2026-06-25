@@ -1,2 +1,2 @@
-#define BOOST_TEST_MODULE shaykhraziev_f0_tests
+#define BOOST_TEST_MODULE F0
 #include <boost/test/included/unit_test.hpp>
