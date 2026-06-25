@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include <hash-functions.hpp>
+#include "../common/hash-functions.hpp"
 
 #include <string>
 

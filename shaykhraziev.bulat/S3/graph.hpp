@@ -1,9 +1,9 @@
 #ifndef S3_GRAPH_HPP
 #define S3_GRAPH_HPP
 
-#include <hash-functions.hpp>
-#include <hash-table.hpp>
-#include <list.hpp>
+#include "../common/hash-functions.hpp"
+#include "../common/hash-table.hpp"
+#include "../common/list.hpp"
 
 #include <cstddef>
 #include <string>
