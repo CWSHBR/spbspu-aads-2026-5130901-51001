@@ -1,9 +1,9 @@
 #ifndef F0_PROJECT_HPP
 #define F0_PROJECT_HPP
 
-#include <cuckoo-hash-table.hpp>
-#include <hash-functions.hpp>
-#include <list.hpp>
+#include "../common/cuckoo-hash-table.hpp"
+#include "../common/hash-functions.hpp"
+#include "../common/list.hpp"
 
 #include <cstddef>
 #include <string>

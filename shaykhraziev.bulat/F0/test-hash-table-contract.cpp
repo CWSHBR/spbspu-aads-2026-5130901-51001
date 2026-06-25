@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 
-#include <cuckoo-hash-table.hpp>
-#include <hash-functions.hpp>
+#include "../common/cuckoo-hash-table.hpp"
+#include "../common/hash-functions.hpp"
 
 #include "commands.hpp"
 #include "planner.hpp"

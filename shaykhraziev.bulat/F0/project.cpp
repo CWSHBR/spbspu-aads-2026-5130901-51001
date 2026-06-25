@@ -1,6 +1,6 @@
 #include "project.hpp"
 
-#include <string-utils.hpp>
+#include "../common/string-utils.hpp"
 
 namespace
 {

@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-#include <string-utils.hpp>
+#include "../common/string-utils.hpp"
 
 #include "commands.hpp"
 #include "io.hpp"

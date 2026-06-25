@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <string-utils.hpp>
+#include "../common/string-utils.hpp"
 
 #include "gantt.hpp"
 #include "io.hpp"
